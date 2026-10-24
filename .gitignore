@@ -1,0 +1,11 @@
+node_modules/
+.venv/
+venv/
+models/
+*.bak-*
+*.log
+logs/
+out/
+.DS_Store
+Thumbs.db
+screenshots/*.tmp.png

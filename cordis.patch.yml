@@ -1,0 +1,7 @@
+# dsh-voice-transcribe 的宿主层。
+#
+# 这里插一行，就把宿主半区（index.js，注册本地转写路由）与浏览器半区（client.js）
+# 一起挂上；两者同属一个包，靠 package.json 里的 dsh.bundle / dsh.client 声明。
+- insert:
+    - id: voice-transcribe
+      name: 'dsh-voice-transcribe'

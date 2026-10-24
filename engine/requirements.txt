@@ -1,0 +1,17 @@
+# Core engine: SenseVoice int8 through sherpa-onnx (CPU, offline).
+# Install into the plugin's private venv:  node bin/vstt.mjs setup
+sherpa-onnx==2.0.0
+numpy>=2.0
+
+# Optional microphone commands (`dsh-vstt mic`, `probe`). File transcription works
+# without these; skip them with:  node bin/vstt.mjs setup --no-mic
+sounddevice>=0.5.0
+pyperclip>=1.8
+
+# Windows-only helpers for reading/setting the capture-endpoint volume.
+pycaw>=20240210; sys_platform == "win32"
+comtypes>=1.4; sys_platform == "win32"
+
+# Optional legacy engine (`--engine whisper`). Not installed by default:
+#   node bin/vstt.mjs setup --with-whisper
+# faster-whisper==1.2.1
