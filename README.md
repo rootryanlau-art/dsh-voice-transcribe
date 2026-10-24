@@ -35,7 +35,11 @@ node bin/vstt.mjs setup --index https://pypi.tuna.tsinghua.edu.cn/simple
 
 ### 面板
 
-点 ⧉ → 填/选一个本地文件路径（会记住最近 5 条）→ 选语言 → 转写 → 结果可「插入输入框」或复制。
+点 ⧉ → 填一个本地**文件或文件夹**路径（会记住最近 5 条）→ 选语言 → 转写 → 结果可「插入输入框」或复制。
+
+- 填**文件**：只转写这一个。
+- 填**文件夹**：批量转写里面所有音视频，最新的排前面、最多 20 个，输出按 `【文件名】` 分段。
+- 路径可以直接用资源管理器「复制文件地址」贴进来（带引号也认），正斜杠也认。
 
 路径先在本机转写，再把文本交给模型，所以**不用先把几十兆音频塞进对话**。
 
@@ -45,6 +49,7 @@ node bin/vstt.mjs setup --index https://pypi.tuna.tsinghua.edu.cn/simple
 dsh-vstt status --json                     # 环境就绪情况
 dsh-vstt doctor                            # 人读的诊断
 dsh-vstt transcribe "D:\会议\r1.m4a" --json # {engine,duration,rtf,segments,text}
+dsh-vstt transcribe "D:\会议" --json       # 整个文件夹 → {mode:"batch",files:[...],text}
 dsh-vstt transcribe "D:\会议\r1.m4a" -o out # 额外写 out\r1.stt.txt
 dsh-vstt mic --seconds 10                  # 麦克风口述（可选依赖）
 ```

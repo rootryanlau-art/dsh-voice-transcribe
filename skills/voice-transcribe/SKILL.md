@@ -1,6 +1,6 @@
 ---
 name: voice-transcribe
-description: Transcribe a local audio or video file into text with the offline SenseVoice engine installed by the dsh-voice-transcribe plugin — meetings, lectures, interviews, screen recordings, voice memos. Use when the user asks to 转写 / 语音转文字 / 把这段录音变成文字 / 会议纪要 / subtitle a local media file, or pastes a path ending in .m4a .mp3 .wav .mp4 .mkv .mov and wants the words. Not for live microphone dictation (that is the composer's hold-to-talk button).
+description: Transcribe a local audio or video file into text with the offline SenseVoice engine installed by the dsh-voice-transcribe plugin — meetings, lectures, interviews, screen recordings, voice memos. Use when the user asks to 转写 / 语音转文字 / 把这段录音变成文字 / 会议纪要 / subtitle a local media file, or pastes a path ending in .m4a .mp3 .wav .mp4 .mkv .mov (or names a folder of such files) and wants the words. Not for live microphone dictation (that is the composer's hold-to-talk button).
 ---
 
 # voice-transcribe
@@ -38,6 +38,7 @@ CLI="node ~/.dsh/profiles/desktop/node_modules/dsh-voice-transcribe/bin/vstt.mjs
 $CLI status --json          # { ready, modelReady, python, modelDir, version }
 $CLI doctor                 # human-readable engine report
 $CLI transcribe "<file>" --json   # { engine, duration, rtf, segments:[{start,end,text}], text }
+$CLI transcribe "<folder>" --json # { mode:"batch", total, files:[...], text } — every media file, newest first
 $CLI transcribe "<file>" -o "<dir>"  # also writes <stem>.stt.txt
 $CLI mic --seconds 10       # microphone dictation (optional packages)
 ```
@@ -46,6 +47,9 @@ Notes:
 
 - `--json` prints one JSON object on the **last line** of stdout; engine logs go
   to stderr. Parse the last non-empty stdout line.
+- A **folder** argument transcribes every audio/video file inside it (newest
+  first, at most 20) and returns `mode:"batch"`; each file's text is prefixed
+  with `【name】`. Use this when the user says "把这一批录音都转成文字".
 - `--lang` accepts `zh` (default), `en`, `yue`, `ja`, `ko`.
 - Non-wav input is converted with ffmpeg; if ffmpeg is missing, ask for a `.wav`
   16 kHz mono file or set `VSTT_FFMPEG` to an ffmpeg executable.

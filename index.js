@@ -10,10 +10,9 @@
 // venv (~/.dsh/voice-transcribe/venv): SenseVoice int8 on CPU, offline, no API key.
 // This half only does path/parameter checking and process management.
 import { spawn } from "node:child_process";
-import { statSync } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
 
 import { ENGINE_FILE, modelDir, pythonPath, MODEL_FILES, readiness } from "./lib/paths.mjs";
+import { resolveTarget } from "./lib/media.mjs";
 
 const ROUTE_STATUS = "/dsh-voice-transcribe/status";
 const ROUTE_TRANSCRIBE = "/dsh-voice-transcribe/transcribe";
@@ -23,10 +22,6 @@ const GATE_VALUE = "run";
 /** Long meetings take a while; the engine runs at roughly 30脳 real time on CPU. */
 const TRANSCRIBE_TIMEOUT_MS = 30 * 60 * 1000;
 const MAX_BODY_BYTES = 16 * 1024;
-const MEDIA_EXTENSIONS = new Set([
-	".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".amr",
-	".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv", ".ts", ".m4v", ".3gp"
-]);
 
 function json(response, status, payload) {
 	const body = Buffer.from(JSON.stringify(payload), "utf8");
@@ -122,25 +117,11 @@ function runEngine(file, lang, engineName) {
 	});
 }
 
-/** Validate a user-supplied path before spending a minute of CPU on it. */
-function checkMediaPath(raw) {
-	if (typeof raw !== "string" || raw.trim() === "") throw new Error("path is required");
-	const file = resolve(raw.trim().replace(/^"(.*)"$/, "$1"));
-	if (!isAbsolute(file)) throw new Error("path must be absolute");
-	let stat;
-	try {
-		stat = statSync(file);
-	} catch {
-		throw new Error(`file not found: ${file}`);
-	}
-	if (!stat.isFile()) throw new Error(`not a file: ${file}`);
-	if (stat.size === 0) throw new Error(`file is empty: ${file}`);
-	const dot = file.lastIndexOf(".");
-	const extension = dot >= 0 ? file.slice(dot).toLowerCase() : "";
-	if (MEDIA_EXTENSIONS.has(extension) === false) {
-		throw new Error(`unsupported extension ${extension || "(none)"} --supported: ${[...MEDIA_EXTENSIONS].join(" ")}`);
-	}
-	return { file, size: stat.size };
+/** Join per-file results into one thing a person can paste into the composer. */
+function combineBatch(results) {
+	return results
+		.map((entry) => `\u3010${entry.name}\u3011\n${entry.text}`.trimEnd())
+		.join("\n\n");
 }
 
 async function handleStatus(request, response) {
@@ -182,13 +163,54 @@ async function handleTranscribe(request, response) {
 		if (!readiness().modelReady) {
 			throw new Error(`SenseVoice model is missing under ${modelDir()} --run: node bin/vstt.mjs setup`);
 		}
-		const { file, size } = checkMediaPath(body.path);
+		const target = resolveTarget(body.path);
 		const language = typeof body.lang === "string" && body.lang.trim() ? body.lang.trim() : "zh";
 		const engineName = body.engine === "whisper" ? "whisper" : "sensevoice";
-		ctxLogger(`transcribing ${file} (${(size / 1048576).toFixed(1)} MB, lang=${language}, engine=${engineName})`);
-		const result = await runEngine(file, language, engineName);
-		ctxLogger(`done in ${result.elapsed.toFixed(1)}s: ${result.text.length} chars, rtf=${result.rtf}`);
-		json(response, 200, { ok: true, path: file, size, lang: language, ...result });
+
+		if (target.kind === "file") {
+			ctxLogger(
+				`transcribing ${target.path} (${(target.size / 1048576).toFixed(1)} MB, lang=${language}, engine=${engineName})`
+			);
+			const result = await runEngine(target.path, language, engineName);
+			ctxLogger(`done in ${result.elapsed.toFixed(1)}s: ${result.text.length} chars, rtf=${result.rtf}`);
+			json(response, 200, { ok: true, mode: "single", path: target.path, size: target.size, lang: language, ...result });
+			return;
+		}
+
+		// Folder: transcribe newest-first, one engine process at a time so CPU stays sane.
+		const entries = [];
+		let elapsed = 0;
+		let duration = 0;
+		ctxLogger(`batch: ${target.total} file(s) in ${target.path}, taking ${target.files.length}`);
+		for (const item of target.files) {
+			ctxLogger(`batch ${entries.length + 1}/${target.files.length}: ${item.name} (${(item.size / 1048576).toFixed(1)} MB)`);
+			const result = await runEngine(item.path, language, engineName);
+			elapsed += result.elapsed;
+			duration += result.duration;
+			entries.push({ ...result, path: item.path, name: item.name, size: item.size });
+			ctxLogger(`batch done: ${item.name} -> ${result.text.length} chars, rtf=${result.rtf}`);
+		}
+		json(response, 200, {
+			ok: true,
+			mode: "batch",
+			path: target.path,
+			total: target.total,
+			taken: entries.length,
+			lang: language,
+			engine: engineName,
+			duration,
+			elapsed,
+			files: entries.map(({ path, name, size, duration: fileDuration, rtf, text }) => ({
+				path,
+				name,
+				size,
+				duration: fileDuration,
+				rtf,
+				chars: text.length
+			})),
+			segments: entries.flatMap((entry) => entry.segments),
+			text: combineBatch(entries)
+		});
 	} catch (error) {
 		json(response, 500, { ok: false, error: error instanceof Error ? error.message : String(error) });
 	}

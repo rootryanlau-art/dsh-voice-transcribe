@@ -55,10 +55,16 @@ check("cordis.patch.yml inserts this package", new RegExp(`name: ["']?${pkg.name
 // ---------------------------------------------------------------- 3. host half
 
 const hostSrc = read("index.js");
+const mediaSrc = read("lib/media.mjs");
+const cliSrc = read("bin/vstt.mjs");
 check("host half exports webServer injection", /inject\s*=\s*\[[^\]]*"webServer"/.test(hostSrc));
 check("host half registers exactly-two exact routes", (hostSrc.match(/kind:\s*["']exact["']/g) || []).length === 2, String((hostSrc.match(/kind:\s*["']exact["']/g) || []).length));
 check("host half gates writes with the custom header", hostSrc.includes("x-dsh-voice-transcribe"));
-check("host half rejects traversal / non-absolute paths", hostSrc.includes("isAbsolute") || hostSrc.includes("resolve("), "");
+check("path guard lives in lib/media.mjs and rejects non-absolute paths", mediaSrc.includes("isAbsolute") && mediaSrc.includes("resolve("), "");
+check("path guard accepts a folder (batch mode)", mediaSrc.includes("isDirectory") && mediaSrc.includes("MAX_BATCH_FILES"));
+check("path guard tolerates quoted paths from Explorer", mediaSrc.includes("^\\\"(.*)\\\"$") || mediaSrc.includes('cleanPath'));
+check("host half transcribes folders as a batch", hostSrc.includes('mode: "batch"'));
+check("CLI accepts a folder too", cliSrc.includes("resolveTarget") && cliSrc.includes('"batch"'));
 
 const hostModule = await import(pathToFileURL(join(ROOT, "index.js")).href);
 check("host module imports cleanly", typeof hostModule.apply === "function", typeof hostModule.apply);

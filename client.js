@@ -68,8 +68,8 @@ window.__ModuleLoader__.load({
         toggleHide: '收起语音转写',
         title: '语音转写',
         hint: '本地离线识别（SenseVoice），音频不出本机',
-        pathLabel: '音视频文件路径（本机绝对路径）',
-        pathPlaceholder: '例如 D:\\录音\\周会.m4a',
+        pathLabel: '音视频文件或文件夹路径（本机绝对路径）',
+        pathPlaceholder: '例如 D:\\录音\\周会.m4a，或整个 D:\\录音 文件夹',
         langLabel: '语言',
         run: '开始转写',
         running: '正在转写…',
@@ -79,7 +79,8 @@ window.__ModuleLoader__.load({
         copy: '复制',
         copied: '已复制',
         recent: '最近用过',
-        empty: '先在上面填一个本地音视频文件的绝对路径，再点「开始转写」。',
+        empty: '先在上面填一个本地音视频文件（或整个文件夹）的绝对路径，再点「开始转写」。填文件夹会批量转写里面最新的音视频，最新的排前面。',
+        batchLine: '已批量转写 {n}/{total} 个文件（最新的优先）',
         notReady: '引擎还没装好：{detail}',
         needPath: '请先填文件路径',
         failed: '转写出错：{message}',
@@ -95,8 +96,8 @@ window.__ModuleLoader__.load({
         toggleHide: 'Hide voice transcription',
         title: 'Voice transcription',
         hint: 'Local, offline (SenseVoice) — the audio never leaves this machine',
-        pathLabel: 'Media file path (absolute, on this machine)',
-        pathPlaceholder: 'e.g. D:\\recordings\\standup.m4a',
+        pathLabel: 'Media file or folder path (absolute, on this machine)',
+        pathPlaceholder: 'e.g. D:\\recordings\\standup.m4a, or the whole D:\\recordings folder',
         langLabel: 'Language',
         run: 'Transcribe',
         running: 'Transcribing…',
@@ -106,7 +107,8 @@ window.__ModuleLoader__.load({
         copy: 'Copy',
         copied: 'Copied',
         recent: 'Recent files',
-        empty: 'Paste the absolute path of a local audio or video file above, then press Transcribe.',
+        empty: 'Enter the absolute path of a local audio/video file (or a whole folder), then press Transcribe. A folder is transcribed as a batch, newest file first.',
+        batchLine: 'Transcribed {n}/{total} files (newest first)',
         notReady: 'Engine is not set up yet: {detail}',
         needPath: 'Enter a file path first',
         failed: 'Transcription failed: {message}',
@@ -528,6 +530,9 @@ window.__ModuleLoader__.load({
               )
             : null,
           notice ? h('div', { style: { fontSize: 12, color: noticeColor } }, notice.text) : null,
+          result && result.mode === 'batch'
+            ? h('div', { style: { fontSize: 11, opacity: 0.7 } }, format(t('batchLine'), { n: result.taken ?? (result.files ? result.files.length : 0), total: result.total ?? 0 }))
+            : null,
           result
             ? h('textarea', {
                 readOnly: true,

@@ -1,81 +1,81 @@
 {
-	"name": "dsh-voice-transcribe",
-	"version": "0.1.0",
-	"description": "Offline speech-to-text for DSH: transcribe local audio and video files (meetings, lectures, screen recordings) with SenseVoice int8 on CPU, and put the transcript into the composer. No API key, no network at run time, audio never leaves the machine.",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/rootryanlau-art/dsh-voice-transcribe.git"
-	},
-	"homepage": "https://github.com/rootryanlau-art/dsh-voice-transcribe",
-	"bugs": {
-		"url": "https://github.com/rootryanlau-art/dsh-voice-transcribe/issues"
-	},
-	"type": "module",
-	"main": "index.js",
-	"license": "MIT",
-	"author": "dsh-voice-transcribe contributors",
-	"keywords": [
-		"deepseek",
-		"deepseek-harness",
-		"dsh",
-		"dsh-plugin",
-		"client-plugin",
-		"voice",
-		"speech-to-text",
-		"asr",
-		"stt",
-		"transcription",
-		"subtitle",
-		"meeting",
-		"sensevoice",
-		"sherpa-onnx",
-		"offline",
-		"chinese"
-	],
-	"engines": {
-		"node": ">=20"
-	},
-	"bin": {
-		"dsh-vstt": "./bin/vstt.mjs"
-	},
-	"exports": {
-		".": "./index.js",
-		"./client": "./client.js",
-		"./package.json": "./package.json"
-	},
-	"files": [
-		"index.js",
-		"client.js",
-		"cordis.patch.yml",
-		"bin/",
-		"engine/",
-		"skills/",
-		"tools/",
-		"README.md",
-		"LICENSE",
-		"CHANGELOG.md",
-		"screenshots.json"
-	],
-	"dsh": {
-		"bundle": {
-			"patch": "./cordis.patch.yml"
-		},
-		"client": {
-			"platform": "web",
-			"immediately": true,
-			"inject": [
-				"@deepseek-ai/dsh-client-ui-conversation"
-			]
-		}
-	},
-	"peerDependencies": {
-		"@deepseek-ai/cordis": ">=0.0.1-rc.1 <0.1.0 || >=0.1.0-rc.1 <0.2.0-0"
-	},
-	"scripts": {
-		"check": "node --check index.js && node --check client.js && node --check bin/vstt.mjs && node --check tools/install.mjs && node --check tools/fetch-model.mjs",
-		"test": "npm run check && node dev/verify.mjs",
-		"setup": "node bin/vstt.mjs setup",
-		"model:fetch": "node tools/fetch-model.mjs",
-		"doctor": "node bin/vstt.mjs doctor"
-	}
+    "name":  "dsh-voice-transcribe",
+    "version":  "0.2.0",
+    "description":  "Offline speech-to-text for DSH: transcribe local audio and video files (meetings, lectures, screen recordings) with SenseVoice int8 on CPU, and put the transcript into the composer. No API key, no network at run time, audio never leaves the machine.",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/rootryanlau-art/dsh-voice-transcribe.git"
+                   },
+    "homepage":  "https://github.com/rootryanlau-art/dsh-voice-transcribe",
+    "bugs":  {
+                 "url":  "https://github.com/rootryanlau-art/dsh-voice-transcribe/issues"
+             },
+    "type":  "module",
+    "main":  "index.js",
+    "license":  "MIT",
+    "author":  "dsh-voice-transcribe contributors",
+    "keywords":  [
+                     "deepseek",
+                     "deepseek-harness",
+                     "dsh",
+                     "dsh-plugin",
+                     "client-plugin",
+                     "voice",
+                     "speech-to-text",
+                     "asr",
+                     "stt",
+                     "transcription",
+                     "subtitle",
+                     "meeting",
+                     "sensevoice",
+                     "sherpa-onnx",
+                     "offline",
+                     "chinese"
+                 ],
+    "engines":  {
+                    "node":  "\u003e=20"
+                },
+    "bin":  {
+                "dsh-vstt":  "./bin/vstt.mjs"
+            },
+    "exports":  {
+                    ".":  "./index.js",
+                    "./client":  "./client.js",
+                    "./package.json":  "./package.json"
+                },
+    "files":  [
+                  "index.js",
+                  "client.js",
+                  "cordis.patch.yml",
+                  "bin/",
+                  "engine/",
+                  "skills/",
+                  "tools/",
+                  "README.md",
+                  "LICENSE",
+                  "CHANGELOG.md",
+                  "screenshots.json"
+              ],
+    "dsh":  {
+                "bundle":  {
+                               "patch":  "./cordis.patch.yml"
+                           },
+                "client":  {
+                               "platform":  "web",
+                               "immediately":  true,
+                               "inject":  [
+                                              "@deepseek-ai/dsh-client-ui-conversation"
+                                          ]
+                           }
+            },
+    "peerDependencies":  {
+                             "@deepseek-ai/cordis":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0"
+                         },
+    "scripts":  {
+                    "check":  "node --check index.js \u0026\u0026 node --check client.js \u0026\u0026 node --check bin/vstt.mjs \u0026\u0026 node --check tools/install.mjs \u0026\u0026 node --check tools/fetch-model.mjs",
+                    "test":  "npm run check \u0026\u0026 node dev/verify.mjs",
+                    "setup":  "node bin/vstt.mjs setup",
+                    "model:fetch":  "node tools/fetch-model.mjs",
+                    "doctor":  "node bin/vstt.mjs doctor"
+                }
 }

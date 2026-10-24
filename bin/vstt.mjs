@@ -22,6 +22,7 @@ import {
 	venvPython,
 	VENV_DIR
 } from "../lib/paths.mjs";
+import { resolveTarget } from "../lib/media.mjs";
 import { fetchModel } from "../tools/fetch-model.mjs";
 
 const NAME = "dsh-vstt";
@@ -211,9 +212,7 @@ async function commandDoctor(options) {
 	if (probe.code !== 0) throw new Error(`engine doctor exited ${probe.code}`);
 }
 
-async function commandTranscribe(options) {
-	const media = options.positional[0];
-	if (!media) throw new Error("transcribe needs a media file: dsh-vstt transcribe <file>");
+async function transcribeOne(media, options) {
 	const python = pythonPath();
 	const args = [ENGINE_FILE, "file", media, "--json"];
 	if (options.lang) args.push("--lang", options.lang);
@@ -223,22 +222,65 @@ async function commandTranscribe(options) {
 	if (result.stderr) warn(result.stderr.trimEnd());
 	if (result.code !== 0) throw new Error(`transcription failed (exit ${result.code})`);
 	const line = result.stdout.trim().split(/\r?\n/).filter(Boolean).pop() ?? "";
-	if (options.json) {
-		say(line);
-		return;
-	}
-	let parsed;
 	try {
-		parsed = JSON.parse(line);
+		return JSON.parse(line);
 	} catch {
-		say(line);
+		throw new Error(`unreadable engine output: ${line.slice(0, 200)}`);
+	}
+}
+
+async function commandTranscribe(options) {
+	const media = options.positional[0];
+	if (!media) throw new Error("transcribe needs a media file or folder: dsh-vstt transcribe <file|folder>");
+	const target = resolveTarget(media);
+
+	if (target.kind === "file") {
+		const parsed = await transcribeOne(target.path, options);
+		if (options.json) {
+			say(JSON.stringify(parsed));
+			return;
+		}
+		say(parsed.text ?? "");
+		say("");
+		say(`engine=${parsed.engine} duration=${parsed.duration}s segments=${parsed.segments?.length ?? 0} rtf=${parsed.rtf}`);
 		return;
 	}
-	say(parsed.text ?? "");
-	say("");
-	say(
-		`engine=${parsed.engine} duration=${parsed.duration}s segments=${parsed.segments?.length ?? 0} rtf=${parsed.rtf}`
-	);
+
+	// Folder: newest-first, capped by MAX_BATCH_FILES; failures on one file do not kill the batch.
+	const results = [];
+	const failures = [];
+	for (const item of target.files) {
+		if (!options.json) warn(`[${results.length + failures.length + 1}/${target.files.length}] ${item.name}`);
+		try {
+			results.push({ name: item.name, ...(await transcribeOne(item.path, options)) });
+		} catch (error) {
+			failures.push({ name: item.name, error: error instanceof Error ? error.message : String(error) });
+		}
+	}
+	if (options.json) {
+		say(
+			JSON.stringify({
+				mode: "batch",
+				path: target.path,
+				total: target.total,
+				taken: target.files.length,
+				files: results.map(({ name, duration, rtf, text }) => ({ name, duration, rtf, chars: text.length })),
+				failures,
+				text: results.map((entry) => `\u3010${entry.name}\u3011\n${entry.text}`.trimEnd()).join("\n\n")
+			})
+		);
+		return;
+	}
+	for (const entry of results) {
+		say(`\u3010${entry.name}\u3011`);
+		say(entry.text ?? "");
+		say("");
+	}
+	if (failures.length > 0) {
+		warn(`${failures.length} file(s) failed:`);
+		for (const failure of failures) warn(`  ${failure.name}: ${failure.error}`);
+	}
+	say(`folder=${target.path} files=${results.length}/${target.files.length} total=${target.total}`);
 }
 
 async function commandMic(options) {
