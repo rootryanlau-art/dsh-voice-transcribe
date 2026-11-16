@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- 打包补上 `lib/`。`index.js` 和 `bin/vstt.mjs` 会 import `lib/paths.mjs`、`lib/media.mjs`，但 `package.json` 的 `files` 没列 `lib/`。`dsh plugin add github:...` 按 `files` 装 tarball，装出来的包没有 `lib/`，宿主报 `Cannot find module .../lib/paths.mjs`（`failed to import`），插件停在未激活。`dev/verify.mjs` 用 `npm pack --dry-run` 检查相对 import 都还在包里。
+
 ## 0.2.0 — 2026-10-24
 
 路径可以填**文件夹**了（这是实际用起来第一个卡住人的地方：指着「录音」目录点转写会报 `not a file`）。

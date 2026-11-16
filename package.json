@@ -48,6 +48,7 @@
                   "client.js",
                   "cordis.patch.yml",
                   "bin/",
+                  "lib/",
                   "engine/",
                   "skills/",
                   "tools/",
