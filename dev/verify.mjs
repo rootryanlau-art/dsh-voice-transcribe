@@ -8,7 +8,7 @@
 // insertion API, bootstrap shape). Exits non-zero on the first failing group.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -119,6 +119,78 @@ try {
 check("`vstt status --json` exits 0", out.status === 0, `exit ${out.status} ${(out.stderr || "").slice(0, 200)}`);
 check("`vstt status --json` prints one JSON line", status !== null, lastLine.slice(0, 160));
 check("status reports a boolean ready flag", status !== null && typeof status.ready === "boolean", JSON.stringify(status && { ready: status.ready, modelReady: status.modelReady }));
+
+// ---------------------------------------------------------------- 8. files-filtered pack
+//
+// `dsh plugin add github:...` installs the npm pack tarball. That tarball follows
+// `package.json` `files`, so every relative import reached from the host entry
+// and the CLI has to be in it, including lib/paths.mjs and lib/media.mjs.
+
+function toPosix(rel) {
+	return rel.split(sep).join("/").replace(/^\.\//, "");
+}
+
+function relativeSpecifiers(source) {
+	const found = [];
+	const re = /(?:from\s+|import\s*\(\s*|import\s+)["'](\.[^"']+)["']/g;
+	let match;
+	while ((match = re.exec(source))) found.push(match[1]);
+	return found;
+}
+
+/** Modules a files-filtered install must contain for the host entry and the CLI to load. */
+function runtimeImports() {
+	const needed = new Set(["lib/paths.mjs", "lib/media.mjs"]);
+	const queue = ["index.js"];
+	for (const target of Object.values(pkg.bin || {})) queue.push(String(target).replace(/^\.\//, ""));
+	const seen = new Set();
+	while (queue.length > 0) {
+		const rel = toPosix(queue.pop());
+		if (seen.has(rel)) continue;
+		seen.add(rel);
+		needed.add(rel);
+		const source = read(rel);
+		if (!source) continue;
+		for (const spec of relativeSpecifiers(source)) {
+			queue.push(toPosix(relative(ROOT, resolve(ROOT, dirname(rel), spec))));
+		}
+	}
+	return [...needed];
+}
+
+function packedFiles() {
+	const npm = spawnSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
+		cwd: ROOT,
+		encoding: "utf8",
+		timeout: 60_000,
+		shell: process.platform === "win32",
+		windowsHide: true
+	});
+	const stdout = npm.stdout || "";
+	const start = stdout.indexOf("[");
+	const end = stdout.lastIndexOf("]");
+	let files = null;
+	if (npm.status === 0 && start >= 0 && end > start) {
+		try {
+			const parsed = JSON.parse(stdout.slice(start, end + 1));
+			const list = parsed?.[0]?.files;
+			if (Array.isArray(list)) files = list.map((entry) => toPosix(String(entry.path || "")));
+		} catch {
+			files = null;
+		}
+	}
+	const detail = `exit ${npm.status} ${(npm.stderr || stdout).slice(0, 200)}`;
+	return { files, detail };
+}
+
+const pack = packedFiles();
+const packed = new Set(pack.files || []);
+const dropped = runtimeImports().filter((rel) => !packed.has(rel));
+check(
+	"files-filtered pack keeps runtime imports (lib/paths.mjs, lib/media.mjs)",
+	pack.files !== null && dropped.length === 0,
+	pack.files === null ? `npm pack --dry-run failed (${pack.detail})` : `dropped: ${dropped.join(", ")}`
+);
 
 // ---------------------------------------------------------------- report
 
